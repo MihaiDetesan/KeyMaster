@@ -22,12 +22,12 @@ namespace MiDe.KeyMaster.Frames
         );
 
         public Form1(string dbPath, ILogger logger)
-        {   
+        {
             borrowController = new BorrowController(dbPath, logger);
             InitializeComponent();
             this.FormBorderStyle = FormBorderStyle.FixedToolWindow;
             this.ControlBox = false;
-            Region = System.Drawing.Region.FromHrgn(CreateRoundRectRgn(0, 0, Width, Height, 10, 10));
+
             borrowController.ChangeToKey += BorrowController_ChangeToKey;
             borrowController.ChangeToPerson += BorrowController_ChangeToPerson;
             borrowController.DisplayStatusMessage += BorrowController_DisplayStatusMessage;
@@ -35,6 +35,10 @@ namespace MiDe.KeyMaster.Frames
             borrowController.ClearPerson += BorrowController_ClearInput;
             BorrowController_ChangeToKey(this, EventArgs.Empty);
             inputTxtBox.CharacterCasing = CharacterCasing.Upper;
+            MaximizeWindow();
+
+            inputTxtBox.Focus();
+
         }
 
         protected override void WndProc(ref Message m)
@@ -50,14 +54,14 @@ namespace MiDe.KeyMaster.Frames
         {
             if (WindowState == FormWindowState.Minimized)
             {
-                WindowState = FormWindowState.Normal;
+                MaximizeWindow();
             }
             // get our current "TopMost" value (ours will always be false though)
-            bool top = TopMost;
-            // make our form jump to the top of everything
-            TopMost = true;
-            // set it back to whatever it was
-            TopMost = top;
+            //bool top = TopMost;
+            //// make our form jump to the top of everything
+            //TopMost = true;
+            //// set it back to whatever it was
+            //TopMost = top;
         }
 
         private void BorrowController_DisplayStatusMessage(object sender, MessageEventArgs e)
@@ -72,7 +76,7 @@ namespace MiDe.KeyMaster.Frames
             pictureBox1.SizeMode = PictureBoxSizeMode.Zoom;
             label.Text = "Scanati persoana";
             inputTxtBox.Clear();
-            inputTxtBox.Focus();
+            inputTxtBox.Select();
         }
 
         private void BorrowController_ChangeToKey(object sender, EventArgs e)
@@ -81,7 +85,7 @@ namespace MiDe.KeyMaster.Frames
             pictureBox1.SizeMode = PictureBoxSizeMode.Zoom;
             label.Text = "Scanati cheia";
             inputTxtBox.Clear();
-            inputTxtBox.Focus();
+            inputTxtBox.Select();
         }
 
         private void BorrowController_ClearInput(object sender, EventArgs e)
@@ -109,7 +113,7 @@ namespace MiDe.KeyMaster.Frames
         private void keyMasterTray_MouseDoubleClick(object sender, MouseEventArgs e)
         {
             Show();
-            this.WindowState = FormWindowState.Normal;
+            MaximizeWindow();
             keyMasterTray.Visible = false;
         }
 
@@ -128,7 +132,7 @@ namespace MiDe.KeyMaster.Frames
             else
             {
                 Show();
-                this.WindowState = FormWindowState.Normal;
+                MaximizeWindow();
                 keyMasterTray.Visible = false;
             }
         }
@@ -137,8 +141,16 @@ namespace MiDe.KeyMaster.Frames
         {
             if (e.Control && e.Shift && e.KeyCode == Keys.X)       // Ctrl-S Save
             {
-                this.Close();
+                Close();
             }
+        }
+
+        private void MaximizeWindow()
+        {
+            Rectangle screen = Screen.PrimaryScreen.WorkingArea;
+            Location = new Point(0, 0);
+            Size = new Size(screen.Width, screen.Height);
+            Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, Width, Height, 10, 10));
         }
     }
 }

@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Logging.Abstractions;
 using MiDe.KeyMaster.Models;
 using System;
+using System.Data;
 
 namespace MiDe.KeyMaster.App
 {
@@ -67,8 +68,8 @@ namespace MiDe.KeyMaster.App
                         KeyId = currentKey.Id
                     }))
                     {
-                        var errorMessage = $"{currentPerson.Id}: {currentPerson.FirstName} {currentPerson.LastName} nu are dreptul sa imprumute" +
-                            $" cheia {currentKey.Id}:{currentKey.Description}";
+                        var errorMessage = $"{currentPerson.FirstName} {currentPerson.LastName} nu are dreptul sa imprumute" +
+                            $" cheia {currentKey.Description}";
                         OnDisplayStatusMessage(new MessageEventArgs(errorMessage));
                     }
                     else
@@ -80,7 +81,7 @@ namespace MiDe.KeyMaster.App
                         };
 
                         var conflictingBurrow = borrowOps.SearchByKey(newBorrow.KeyId);
-                        
+
                         if (conflictingBurrow is Borrow && conflictingBurrow.PersonId != newBorrow.PersonId)
                         {
                             var loanMessage = $"Cheia {currentKey.Description} e deja imprumutata de {currentPerson.LastName} {currentPerson.FirstName}";
@@ -147,6 +148,11 @@ namespace MiDe.KeyMaster.App
             }
 
             return true;
+        }
+
+        public DataTable? GetLoansByPage(int pageIndex, int pageSize)
+        {
+            return borrowOps.GetByPage(pageIndex, pageSize);
         }
 
 

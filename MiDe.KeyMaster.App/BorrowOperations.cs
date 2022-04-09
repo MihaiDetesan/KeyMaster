@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data;
 using Microsoft.Extensions.Logging;
 using MiDe.KeyMaster.Models;
 
@@ -109,6 +110,20 @@ namespace MiDe.KeyMaster.App
             string sql = "delete from Borrow where KeyId= @id";
             var rowsAffected = db.ExecuteWrite(sql, args);
             return (rowsAffected > 0) ? true : false;
+        }
+
+        internal DataTable? GetByPage(int pageIndex, int pagesize)
+        {
+            var args = new Dictionary<string, object>
+            {
+                {"@recordIndex", pageIndex*(pagesize-1)},
+                {"@pagesize", pagesize},
+            };
+
+            string sql = "SELECT * FROM ExtendedLoan order by Description limit @recordIndex,@pageSize";
+            var dtTable = db.Execute(sql, args);            
+
+            return dtTable;            
         }
     }
 }
