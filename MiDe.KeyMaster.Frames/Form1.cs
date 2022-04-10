@@ -9,6 +9,8 @@ namespace MiDe.KeyMaster.Frames
     public partial class Form1 : Form
     {
         BorrowController borrowController;
+        EthernetNotificationListener ethListener;
+
 
         [DllImport("Gdi32.dll", EntryPoint = "CreateRoundRectRgn")]
         private static extern IntPtr CreateRoundRectRgn
@@ -21,23 +23,46 @@ namespace MiDe.KeyMaster.Frames
             int nHeightEllipse // height of ellipse
         );
 
-        public Form1(string dbPath, ILogger logger)
+        public Form1(string dbPath, EthernetNotificationListener ethListener, ILogger logger)
         {
             borrowController = new BorrowController(dbPath, logger);
             InitializeComponent();
             this.FormBorderStyle = FormBorderStyle.FixedToolWindow;
             this.ControlBox = false;
+            this.ethListener = ethListener;
 
             borrowController.ChangeToKey += BorrowController_ChangeToKey;
             borrowController.ChangeToPerson += BorrowController_ChangeToPerson;
             borrowController.DisplayStatusMessage += BorrowController_DisplayStatusMessage;
             borrowController.ClearKey += BorrowController_ClearInput;
             borrowController.ClearPerson += BorrowController_ClearInput;
+            ethListener.MessageReceived += EthListener_MessageReceived;
+
             BorrowController_ChangeToKey(this, EventArgs.Empty);
             inputTxtBox.CharacterCasing = CharacterCasing.Upper;
             MaximizeWindow();
 
             inputTxtBox.Focus();
+        }
+
+        private void EthListener_MessageReceived(object? sender, MessageEventArgs e)
+        {
+            if (!InvokeRequired)
+            {
+                statusTextBox.Clear();
+                inputTxtBox.Text = e.Message;
+                label.Select();
+            }
+            else
+            {
+                Invoke(new Action<string>((message) =>
+                {
+                    statusTextBox.Clear();
+                    inputTxtBox.Text = message;
+                    label.Select();
+                }), e.Message);
+
+            }
 
         }
 

@@ -4,6 +4,8 @@ using Microsoft.Extensions.Logging;
 using Microsoft.TeamFoundation.Common.Internal;
 using NLog;
 using NLog.Extensions.Logging;
+using System.Net;
+using System.Net.Sockets;
 using System.Runtime.InteropServices;
 
 namespace MiDe.KeyMaster.Frames
@@ -33,7 +35,21 @@ namespace MiDe.KeyMaster.Frames
                 // To customize application configuration such as set high DPI settings or default font,
                 // see https://aka.ms/applicationconfiguration.
                 ApplicationConfiguration.Initialize();
-                Application.Run(new Form1(configuration["DbPath"], logger.CreateLogger("logger")));
+                var abstractLogger = logger.CreateLogger("logger");
+
+                var port = int.Parse(configuration["Port"]);
+                var ip = configuration["Ip"];
+
+                var validAdreeses = GetLocalIPAddress();
+                if (!validAdreeses.Contains(ip))
+                {
+                    throw new ApplicationException($"{ip} is not a valid IP address");
+                }
+
+                var ethernetListenr = new EthernetNotificationListener(ip, port, abstractLogger);
+                ethernetListenr.StartListenerAsync();
+
+                Application.Run(new Form1(configuration["DbPath"], ethernetListenr, abstractLogger));
                 mutex.ReleaseMutex();
             }
             else
@@ -42,8 +58,24 @@ namespace MiDe.KeyMaster.Frames
                 (IntPtr)NativeMethods.HWND_BROADCAST,
                 NativeMethods.WM_SHOWME,
                 IntPtr.Zero,
-                IntPtr.Zero);            
+                IntPtr.Zero);
             }
+        }
+
+        public static IList<string> GetLocalIPAddress()
+        {
+            var host = Dns.GetHostEntry(Dns.GetHostName());
+            var validAdresses = new List<string>();
+
+            foreach (var ip in host.AddressList)
+            {
+                if (ip.AddressFamily == AddressFamily.InterNetwork)
+                {
+                    validAdresses.Add(ip.ToString());
+                }
+            }
+
+            return validAdresses;
         }
     }
 
