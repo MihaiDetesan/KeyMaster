@@ -11,7 +11,6 @@ namespace MiDe.KeyMaster.Frames
         BorrowController borrowController;
         EthernetNotificationListener ethListener;
 
-
         [DllImport("Gdi32.dll", EntryPoint = "CreateRoundRectRgn")]
         private static extern IntPtr CreateRoundRectRgn
         (
@@ -30,19 +29,24 @@ namespace MiDe.KeyMaster.Frames
             this.FormBorderStyle = FormBorderStyle.FixedToolWindow;
             this.ControlBox = false;
             this.ethListener = ethListener;
+            this.KeyPreview = true;
+            this.KeyDown += new KeyEventHandler(this.Form1_KeyDown);
 
             borrowController.ChangeToKey += BorrowController_ChangeToKey;
             borrowController.ChangeToPerson += BorrowController_ChangeToPerson;
             borrowController.DisplayStatusMessage += BorrowController_DisplayStatusMessage;
             borrowController.ClearKey += BorrowController_ClearInput;
             borrowController.ClearPerson += BorrowController_ClearInput;
-            ethListener.MessageReceived += EthListener_MessageReceived;
+            this.ethListener.MessageReceived += EthListener_MessageReceived;
 
             BorrowController_ChangeToKey(this, EventArgs.Empty);
-            inputTxtBox.CharacterCasing = CharacterCasing.Upper;
+            //inputTxtBox.CharacterCasing = CharacterCasing.Upper;
+            statusTextBox.Cursor = Cursors.No;
+            statusTextBox.SelectionAlignment = HorizontalAlignment.Center;
+            statusTextBox.ForeColor = SystemColors.HotTrack;
             MaximizeWindow();
 
-            inputTxtBox.Focus();
+            //inputTxtBox.Focus();
         }
 
         private void EthListener_MessageReceived(object? sender, MessageEventArgs e)
@@ -50,16 +54,18 @@ namespace MiDe.KeyMaster.Frames
             if (!InvokeRequired)
             {
                 statusTextBox.Clear();
-                inputTxtBox.Text = e.Message;
-                label.Select();
+                borrowController.AddNewInput(e.Message);
+                //inputTxtBox.Text = e.Message;
+                //label.Select();
             }
             else
             {
                 Invoke(new Action<string>((message) =>
                 {
                     statusTextBox.Clear();
-                    inputTxtBox.Text = message;
-                    label.Select();
+                    borrowController.AddNewInput(e.Message);
+                    //inputTxtBox.Text = message;
+                    //label.Select();
                 }), e.Message);
 
             }
@@ -100,8 +106,8 @@ namespace MiDe.KeyMaster.Frames
             pictureBox1.Image = Image.FromFile(".\\pict\\person2.png");
             pictureBox1.SizeMode = PictureBoxSizeMode.Zoom;
             label.Text = "Scanati persoana";
-            inputTxtBox.Clear();
-            inputTxtBox.Select();
+            //inputTxtBox.Clear();
+            //inputTxtBox.Select();
         }
 
         private void BorrowController_ChangeToKey(object sender, EventArgs e)
@@ -109,18 +115,18 @@ namespace MiDe.KeyMaster.Frames
             pictureBox1.Image = Image.FromFile(".\\pict\\keys.png");
             pictureBox1.SizeMode = PictureBoxSizeMode.Zoom;
             label.Text = "Scanati cheia";
-            inputTxtBox.Clear();
-            inputTxtBox.Select();
+            //inputTxtBox.Clear();
+            //inputTxtBox.Select();
         }
 
         private void BorrowController_ClearInput(object sender, EventArgs e)
         {
-            inputTxtBox.Clear();
+            //inputTxtBox.Clear();
         }
 
         private void inputTxtBox_Leave(object sender, EventArgs e)
         {
-            borrowController.AddNewInput(inputTxtBox.Text.ToString());
+            //borrowController.AddNewInput(inputTxtBox.Text.ToString());
         }
 
         private void Form1_Resize(object sender, EventArgs e)

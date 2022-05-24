@@ -19,6 +19,7 @@ namespace MiDe.KeyMaster.App
         private KeyOperations keyOps;
         private PersonOperations personOps;
         private PermissionOperations permissionOps;
+        private HistoryOperations historyOps;
         private Db db;
         private ILogger logger;
         Key currentKey;
@@ -41,6 +42,7 @@ namespace MiDe.KeyMaster.App
             personOps = new PersonOperations(db, logger);
             borrowOps = new BorrowOperations(db, logger);
             permissionOps = new PermissionOperations(db, logger);
+            historyOps = new HistoryOperations(db,logger);
         }
 
         public BorrowController(string dbPath) : this(dbPath, NullLogger.Instance)
@@ -54,8 +56,26 @@ namespace MiDe.KeyMaster.App
             {
                 if (TryAddingANewKey(candidate))
                 {
-                    state = BorrowState.Person;
-                    OnChangeToPerson();
+                    var borrow = borrowOps.SearchByKey(candidate);
+
+                    if (borrow is Borrow)
+                    {
+                        var loanMessage = $"Cheia {currentKey.Description} a fost inapoiata";
+                        OnDisplayStatusMessage(new MessageEventArgs(loanMessage));
+                        borrowOps.Delete(candidate);
+                        historyOps.Add(new Record()
+                        {
+                            KeyId = borrow.KeyId,
+                            PersonId = borrow.PersonId,
+                            BorrowDate = borrow.CreatedDate,
+                            ReturnDate = DateTime.Now,
+                        });
+                    }
+                    else
+                    {
+                        state = BorrowState.Person;
+                        OnChangeToPerson();
+                    }
                 }
             }
             else
@@ -80,28 +100,9 @@ namespace MiDe.KeyMaster.App
                             PersonId = currentPerson.Id
                         };
 
-                        var conflictingBurrow = borrowOps.SearchByKey(newBorrow.KeyId);
-
-                        if (conflictingBurrow is Borrow && conflictingBurrow.PersonId != newBorrow.PersonId)
-                        {
-                            var loanMessage = $"Cheia {currentKey.Description} e deja imprumutata de {currentPerson.LastName} {currentPerson.FirstName}";
-                            OnDisplayStatusMessage(new MessageEventArgs(loanMessage));
-                        }
-                        else
-                        {
-                            if (borrowOps.Exists(newBorrow))
-                            {
-                                var loanMessage = $"{currentPerson.LastName} {currentPerson.FirstName} a inapoiat cheia {currentKey.Description}";
-                                OnDisplayStatusMessage(new MessageEventArgs(loanMessage));
-                                borrowOps.Delete(newBorrow.KeyId);
-                            }
-                            else
-                            {
-                                var loanMessage = $"{currentPerson.LastName} {currentPerson.FirstName} a imprumutat cheia {currentKey.Description}";
-                                OnDisplayStatusMessage(new MessageEventArgs(loanMessage));
-                                borrowOps.Add(newBorrow);
-                            }
-                        }
+                        var loanMessage = $"{currentPerson.LastName} {currentPerson.FirstName} a imprumutat cheia {currentKey.Description}";
+                        OnDisplayStatusMessage(new MessageEventArgs(loanMessage));
+                        borrowOps.Add(newBorrow);
                     }
 
                     state = BorrowState.Key;
@@ -109,10 +110,15 @@ namespace MiDe.KeyMaster.App
                 }
             }
         }
+        public DataTable? GetLoansByPage(int pageIndex, int pageSize)
+        {
+            return borrowOps.GetByPage(pageIndex, pageSize);
+        }
 
         public bool TryAddingANewKey(string keyCandidate)
         {
             var key = keyOps.Search(keyCandidate);
+
             if (key is null)
             {
                 var missingMessage = $"Nu am gasit cheia cu codul {keyCandidate}.Scaneaza din nou cheia.";
@@ -124,12 +130,10 @@ namespace MiDe.KeyMaster.App
             {
                 currentKey = key;
                 OnDisplayStatusMessage(new MessageEventArgs($"Ati scanat cheia {key.Description}"));
-
             }
 
             return true;
         }
-
         public bool TryAddingANewPerson(string personCandidate)
         {
             var person = personOps.Search(personCandidate);
@@ -149,37 +153,27 @@ namespace MiDe.KeyMaster.App
 
             return true;
         }
-
-        public DataTable? GetLoansByPage(int pageIndex, int pageSize)
-        {
-            return borrowOps.GetByPage(pageIndex, pageSize);
-        }
-
-
-        protected virtual void OnChangeToKey()
+        internal virtual void OnChangeToKey()
         {
             EventHandler handler = ChangeToKey;
             handler?.Invoke(this, EventArgs.Empty);
         }
-        protected virtual void OnChangeToPerson()
+        internal virtual void OnChangeToPerson()
         {
             EventHandler handler = ChangeToPerson;
             handler?.Invoke(this, EventArgs.Empty);
         }
-
-        protected virtual void OnClearKey()
+        internal virtual void OnClearKey()
         {
             EventHandler handler = ClearKey;
             handler?.Invoke(this, EventArgs.Empty);
         }
-
-        protected virtual void OnClearPerson()
+        internal virtual void OnClearPerson()
         {
             EventHandler handler = ClearPerson;
             handler?.Invoke(this, EventArgs.Empty);
         }
-
-        protected virtual void OnDisplayStatusMessage(MessageEventArgs e)
+        internal virtual void OnDisplayStatusMessage(MessageEventArgs e)
         {
             logger.LogDebug(e.Message);
             EventHandler<MessageEventArgs> handler = DisplayStatusMessage;
